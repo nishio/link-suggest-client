@@ -21,14 +21,14 @@ function App() {
     });
   }, []);
 
-  const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const onChange = (e: React.CompositionEvent<HTMLTextAreaElement>) => {
     // setResult(e.target.value);
     if (apiState !== "OK") return;
     setAPIState("SEARCHING");
     fetch(`${API_SERVER}/api/`, {
       mode: "cors",
       method: "POST",
-      body: JSON.stringify({ q: e.target.value }),
+      body: JSON.stringify({ q: e.currentTarget.value }),
       headers: {
         "Content-Type": "application/json",
       },
@@ -64,7 +64,7 @@ function App() {
     <>
       <h1>linkSuggest</h1>
       <p>{apiState}</p>
-      <textarea onChange={onChange}></textarea>
+      <textarea onCompositionEnd={onChange}></textarea>
       {result}
     </>
   );
