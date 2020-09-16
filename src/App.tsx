@@ -2,9 +2,12 @@ import React from "react";
 import "./App.css";
 import { useState } from "react";
 import { useEffect } from "react";
+import { resultToDom } from "./resultToDom";
 
 // const API_SERVER = "http://localhost:5000";
 const API_SERVER = "https://link-suggest-server.herokuapp.com";
+
+let isUsingIME = false;
 
 function App() {
   const [result, setResult] = useState(<div></div>);
@@ -21,50 +24,47 @@ function App() {
     });
   }, []);
 
-  const onChange = (e: React.CompositionEvent<HTMLTextAreaElement>) => {
-    // setResult(e.target.value);
-    if (apiState !== "OK") return;
+  const doSearch = (query: string) => {
     setAPIState("SEARCHING");
     fetch(`${API_SERVER}/api/`, {
       mode: "cors",
       method: "POST",
-      body: JSON.stringify({ q: e.currentTarget.value }),
+      body: JSON.stringify({ q: query }),
       headers: {
         "Content-Type": "application/json",
       },
-    }).then((response) => {
+    }).then((response: Response) => {
       response.json().then((json) => {
-        const items = json.items.map((x: any) => {
-          const links = x.digest.items.map((y: any) => {
-            const url = `https://scrapbox.io/nishio/${y[0]}`;
-            return (
-              <span>
-                <a href={url}>{y[0]}</a>
-                {y[1]} &nbsp;
-              </span>
-            );
-          });
-          return (
-            <li>
-              {x.text}: <ul>{links}</ul>
-            </li>
-          );
-        });
-        setResult(
-          <div>
-            <p>search time: {json.search_time.toFixed(2)} msec</p>
-            <ul>{items}</ul>
-          </div>
-        );
+        const dom = resultToDom(json);
+        setResult(dom);
         setAPIState("OK");
       });
     });
+  };
+
+  const onCompositionStart = (e: React.CompositionEvent) => {
+    isUsingIME = true;
+  };
+
+  const onCompositionEnd = (e: React.CompositionEvent<HTMLTextAreaElement>) => {
+    isUsingIME = false;
+    if (apiState !== "OK") return;
+    doSearch(e.currentTarget.value);
+  };
+  const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    if (isUsingIME) return;
+    if (apiState !== "OK") return;
+    doSearch(e.currentTarget.value);
   };
   return (
     <>
       <h1>linkSuggest</h1>
       <p>{apiState}</p>
-      <textarea onCompositionEnd={onChange}></textarea>
+      <textarea
+        onCompositionStart={onCompositionStart}
+        onCompositionEnd={onCompositionEnd}
+        onChange={onChange}
+      ></textarea>
       {result}
     </>
   );
