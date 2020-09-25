@@ -4,25 +4,32 @@ import { useState } from "react";
 import { useEffect } from "react";
 import { resultToDom } from "./resultToDom";
 
-// const API_SERVER = "http://localhost:5000";
-const API_SERVER = "https://link-suggest-server.herokuapp.com";
-
 let isUsingIME = false;
 
 function App() {
   const [result, setResult] = useState(<div></div>);
   const [apiState, setAPIState] = useState(
-    "CONNECTING" as "CONNECTING" | "OK" | "SEARCHING"
+    "CONNECTING" as "CONNECTING" | "OK" | "SEARCHING" | "ERROR"
   );
+  const [isLocalServer, setIsLocalServer] = useState(false);
 
-  useEffect(() => {
+  const API_SERVER = isLocalServer
+    ? "http://localhost:5000"
+    : "https://link-suggest-server.herokuapp.com";
+
+  const connectServer = () => {
     fetch(`${API_SERVER}/`, {
       mode: "cors",
       method: "GET",
-    }).then((response) => {
-      setAPIState("OK");
-    });
-  }, []);
+    })
+      .then((response) => {
+        setAPIState("OK");
+      })
+      .catch(() => {
+        setAPIState("ERROR");
+      });
+  };
+  useEffect(connectServer, [API_SERVER]);
 
   const doSearch = (query: string) => {
     setAPIState("SEARCHING");
@@ -33,13 +40,17 @@ function App() {
       headers: {
         "Content-Type": "application/json",
       },
-    }).then((response: Response) => {
-      response.json().then((json) => {
-        const dom = resultToDom(json);
-        setResult(dom);
-        setAPIState("OK");
+    })
+      .then((response: Response) => {
+        response.json().then((json) => {
+          const dom = resultToDom(json);
+          setResult(dom);
+          setAPIState("OK");
+        });
+      })
+      .catch(() => {
+        setAPIState("ERROR");
       });
-    });
   };
 
   const onCompositionStart = (e: React.CompositionEvent) => {
@@ -56,6 +67,10 @@ function App() {
     if (apiState !== "OK") return;
     doSearch(e.currentTarget.value);
   };
+
+  const checkbox_isLocalServer_clicked = () => {
+    setIsLocalServer(!isLocalServer);
+  };
   return (
     <>
       <h1>linkSuggest</h1>
@@ -66,6 +81,12 @@ function App() {
         onChange={onChange}
       ></textarea>
       {result}
+      <hr />
+      <p>Developper menu</p>
+      <span onClick={checkbox_isLocalServer_clicked}>
+        <input type="checkbox" checked={isLocalServer}></input>
+        <span>Use development server</span>
+      </span>
     </>
   );
 }
